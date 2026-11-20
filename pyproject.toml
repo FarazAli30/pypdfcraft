@@ -1,0 +1,80 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pypdfcraft"
+dynamic = ["version"]
+description = "Python library for the PdfCraft PDF engine: edit text and images, convert, compress, merge, split, OCR, sign - fully offline."
+readme = "README.md"
+requires-python = ">=3.9"
+license = "MIT OR Apache-2.0"
+license-files = ["LICENSE-MIT", "LICENSE-APACHE", "NOTICE"]
+authors = [{ name = "Faraz Ali", email = "farazjankhushk@gmail.com" }]
+maintainers = [{ name = "Faraz Ali", email = "farazjankhushk@gmail.com" }]
+keywords = ["pdf", "pdf-editor", "pdf-compress", "pdf-merge", "pdf-split", "ocr", "pdf-to-word",
+            "pdf-to-image", "pdf-signing", "rust", "uniffi", "pdfcraft"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: MacOS",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: Android",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Rust",
+    "Topic :: Multimedia :: Graphics :: Graphics Conversion",
+    "Topic :: Office/Business",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Typing :: Typed",
+]
+dependencies = []
+
+[project.optional-dependencies]
+numpy = ["numpy"]
+pil = ["pillow"]
+ocr = ["pypdfcraft-ocr-models>=0.1.0"]
+all = ["numpy", "pillow", "pypdfcraft-ocr-models>=0.1.0"]
+dev = ["tomli; python_version < \"3.11\"", "pytest>=8", "ruff>=0.6", "build", "twine", "mkdocs>=1.6,<2", "mkdocs-material>=9.5"]
+
+[project.urls]
+Homepage = "https://github.com/FarazAli30/pypdfcraft"
+Documentation = "https://FarazAli30.github.io/pypdfcraft/"
+Source = "https://github.com/FarazAli30/pypdfcraft"
+Issues = "https://github.com/FarazAli30/pypdfcraft/issues"
+Changelog = "https://github.com/FarazAli30/pypdfcraft/blob/main/CHANGELOG.md"
+"Upstream engine (PdfCraft)" = "https://github.com/artcraft-android/pdfcraft-android"
+
+[project.scripts]
+pypdfcraft = "pypdfcraft.__main__:main"
+
+[tool.setuptools.dynamic]
+version = { attr = "pypdfcraft._version.__version__" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+pypdfcraft = ["py.typed", "data/*.json", "_lib/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+markers = ["engine: needs the native engine library (skipped when it cannot be loaded)"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py39"
+extend-exclude = ["src/pypdfcraft/_bindings.py", "src/pypdfcraft/oneshot.py", "rust"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+ignore = ["E741", "E501", "E701", "E702", "E731", "F403", "F401", "E402"]

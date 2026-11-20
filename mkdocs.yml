@@ -1,0 +1,37 @@
+site_name: pypdfcraft
+site_description: Python library for the PdfCraft PDF engine
+site_url: https://FarazAli30.github.io/pypdfcraft/
+repo_url: https://github.com/FarazAli30/pypdfcraft
+repo_name: FarazAli30/pypdfcraft
+copyright: "Copyright &copy; 2026 Faraz Ali. Engine: PdfCraft, &copy; ArtCraft Team and the PdfCraft contributors."
+theme:
+  name: material
+  features: [navigation.sections, navigation.top, content.code.copy, search.suggest]
+nav:
+  - Home: index.md
+  - Getting started:
+      - Installation: installation.md
+      - Quickstart: quickstart.md
+      - Cookbook: cookbook.md
+  - Guides:
+      - Editing text & images: editing.md
+      - Converting: converting.md
+      - OCR: ocr.md
+      - Viewing pages (Tkinter / Qt): viewer.md
+  - Reference:
+      - Functions: api.md
+      - All engine tools: tools.md
+      - Feature coverage: coverage.md
+  - Project:
+      - Architecture: architecture.md
+      - Building from source: building.md
+      - Releasing: releasing.md
+      - Troubleshooting: troubleshooting.md
+      - Credits & licence: credits.md
+markdown_extensions:
+  - admonition
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.highlight
+  - pymdownx.superfences
