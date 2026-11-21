@@ -122,12 +122,12 @@ jobs:
           python -c "import pypdfcraft as p; print('engine', p.engine_version(), '| tools', len(p.tools()))"
           python -m pytest -m engine -v
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: wheel-${{ matrix.name }}
           path: dist/*.whl
           if-no-files-found: error
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: matrix.termux_tag
         with:
           name: termux-${{ matrix.name }}
@@ -174,7 +174,7 @@ jobs:
         run: python scripts/fetch_models.py
       - name: Build pure-Python models wheel
         run: python -m build --wheel packages/ocr-models --outdir dist
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: wheel-ocr-models
           path: dist/*.whl
@@ -198,11 +198,11 @@ jobs:
       - run: pip install twine
       - run: twine check dist/*.whl
       - run: ls -la dist dist-termux
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: all-wheels
           path: dist/*.whl
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: all-termux-wheels
           path: dist-termux/*.whl
