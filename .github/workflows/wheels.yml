@@ -43,7 +43,7 @@ jobs:
           - { name: android-x86_64,      os: ubuntu-latest,  target: x86_64-linux-android,        build: ndk,      abi: x86_64,      lib: libpdfcraft_android.so, tag: android_24_x86_64 }
           - { name: android-x86,         os: ubuntu-latest,  target: i686-linux-android,          build: ndk,      abi: x86,         lib: libpdfcraft_android.so, tag: android_24_x86 }
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: dtolnay/rust-toolchain@master
         with:
@@ -150,7 +150,7 @@ jobs:
           - { name: windows-x86_64, os: windows-latest, python: "3.9"  }
           - { name: windows-x86_64, os: windows-latest, python: "3.13" }
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v5
         with: { python-version: "${{ matrix.python }}" }
       - uses: actions/download-artifact@v4
@@ -166,7 +166,7 @@ jobs:
   ocr-models-wheel:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
       - run: pip install build
