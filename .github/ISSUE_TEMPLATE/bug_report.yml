@@ -1,0 +1,25 @@
+name: Bug report
+description: Something does not work
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: "What happened?"
+      description: "What did you do, what did you expect, what happened instead?"
+    validations: { required: true }
+  - type: textarea
+    id: diag
+    attributes:
+      label: Output of `python -m pypdfcraft diagnose`
+      render: text
+    validations: { required: true }
+  - type: textarea
+    id: code
+    attributes:
+      label: "Minimal code"
+      render: python
+  - type: input
+    id: pdf
+    attributes:
+      label: "Can you share the PDF (or a minimal one that reproduces it)?"

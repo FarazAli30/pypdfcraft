@@ -1,0 +1,208 @@
+name: Build wheels
+
+# Builds the Rust engine for every platform, wraps each library into a py3-none-<platform> wheel,
+# smoke-tests the wheels that can run on the CI runner, and uploads them as artifacts.
+# Called by release.yml; can also be run by hand (Actions > Build wheels > Run workflow).
+
+on:
+  workflow_call:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ["rust/**", "src/**", "scripts/build_wheel.py", ".github/workflows/wheels.yml"]
+
+permissions:
+  contents: read
+
+env:
+  RUST_TOOLCHAIN: "1.99.0"
+
+jobs:
+  native:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # ---- Linux (glibc 2.28+, built with zig so old distros work) --------------------------
+          - { name: linux-x86_64,        os: ubuntu-latest,  target: x86_64-unknown-linux-gnu,    build: zigbuild, zig_target: "x86_64-unknown-linux-gnu.2.28",    lib: libpdfcraft_android.so,   tag: manylinux_2_28_x86_64,  test: true }
+          - { name: linux-aarch64,       os: ubuntu-latest,  target: aarch64-unknown-linux-gnu,   build: zigbuild, zig_target: "aarch64-unknown-linux-gnu.2.28",   lib: libpdfcraft_android.so,   tag: manylinux_2_28_aarch64, test: false }
+          # ---- Alpine / musl ---------------------------------------------------------------------
+          - { name: musllinux-x86_64,    os: ubuntu-latest,  target: x86_64-unknown-linux-musl,   build: zigbuild, zig_target: "x86_64-unknown-linux-musl",        lib: libpdfcraft_android.so,   tag: musllinux_1_2_x86_64,   test: false, rustflags: "-C target-feature=-crt-static" }
+          - { name: musllinux-aarch64,   os: ubuntu-latest,  target: aarch64-unknown-linux-musl,  build: zigbuild, zig_target: "aarch64-unknown-linux-musl",       lib: libpdfcraft_android.so,   tag: musllinux_1_2_aarch64,  test: false, rustflags: "-C target-feature=-crt-static" }
+          # ---- macOS -----------------------------------------------------------------------------
+          - { name: macos-arm64,         os: macos-14,       target: aarch64-apple-darwin,        build: cargo,    lib: libpdfcraft_android.dylib, tag: macosx_11_0_arm64,      test: true,  deployment: "11.0" }
+          - { name: macos-x86_64,        os: macos-14,       target: x86_64-apple-darwin,         build: cargo,    lib: libpdfcraft_android.dylib, tag: macosx_10_13_x86_64,    test: false, deployment: "10.13" }
+          # ---- Windows ---------------------------------------------------------------------------
+          - { name: windows-x86_64,      os: windows-latest, target: x86_64-pc-windows-msvc,      build: cargo,    lib: pdfcraft_android.dll,      tag: win_amd64,             test: true,  rustflags: "-C target-feature=+crt-static" }
+          - { name: windows-arm64,       os: windows-latest, target: aarch64-pc-windows-msvc,     build: cargo,    lib: pdfcraft_android.dll,      tag: win_arm64,             test: false, rustflags: "-C target-feature=+crt-static" }
+          # ---- Android (PEP 738 tags; API 24 = Python 3.13 on Android's minimum) -----------------
+          - { name: android-arm64-v8a,   os: ubuntu-latest,  target: aarch64-linux-android,       build: ndk,      abi: arm64-v8a,   lib: libpdfcraft_android.so, tag: android_24_arm64_v8a,   termux_tag: linux_aarch64 }
+          - { name: android-armeabi-v7a, os: ubuntu-latest,  target: armv7-linux-androideabi,     build: ndk,      abi: armeabi-v7a, lib: libpdfcraft_android.so, tag: android_24_armeabi_v7a, termux_tag: linux_armv7l }
+          - { name: android-x86_64,      os: ubuntu-latest,  target: x86_64-linux-android,        build: ndk,      abi: x86_64,      lib: libpdfcraft_android.so, tag: android_24_x86_64 }
+          - { name: android-x86,         os: ubuntu-latest,  target: i686-linux-android,          build: ndk,      abi: x86,         lib: libpdfcraft_android.so, tag: android_24_x86 }
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
+          targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust
+          key: ${{ matrix.name }}
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+
+      - name: Install cargo-zigbuild
+        if: matrix.build == 'zigbuild'
+        run: pip install cargo-zigbuild
+
+      - name: Install cargo-ndk
+        if: matrix.build == 'ndk'
+        run: cargo install cargo-ndk --locked
+
+      # ---------------------------------------------------------------------------- build the library
+      - name: Build (cargo)
+        if: matrix.build == 'cargo'
+        working-directory: rust
+        shell: bash
+        env:
+          MACOSX_DEPLOYMENT_TARGET: ${{ matrix.deployment }}
+          RUSTFLAGS: ${{ matrix.rustflags }}
+        run: cargo build --release --locked -p pdfcraft-android --target ${{ matrix.target }}
+
+      - name: Build (zigbuild, manylinux/musllinux)
+        if: matrix.build == 'zigbuild'
+        working-directory: rust
+        env:
+          RUSTFLAGS: ${{ matrix.rustflags }}
+        run: cargo zigbuild --release --locked -p pdfcraft-android --target ${{ matrix.zig_target }}
+
+      - name: Build (cargo-ndk, Android)
+        if: matrix.build == 'ndk'
+        working-directory: rust
+        run: |
+          export ANDROID_NDK_HOME="${ANDROID_NDK_LATEST_HOME:-$ANDROID_NDK_HOME}"
+          cargo ndk -t ${{ matrix.abi }} -P 24 build --release --locked -p pdfcraft-android
+
+      - name: Locate library
+        id: lib
+        shell: bash
+        run: echo "path=rust/target/${{ matrix.target }}/release/${{ matrix.lib }}" >> "$GITHUB_OUTPUT"
+
+      - name: Strip (Linux / Android)
+        if: matrix.build != 'cargo'
+        shell: bash
+        run: |
+          if command -v llvm-strip >/dev/null; then llvm-strip --strip-unneeded "${{ steps.lib.outputs.path }}" || true;
+          else strip --strip-unneeded "${{ steps.lib.outputs.path }}" 2>/dev/null || true; fi
+
+      # ---------------------------------------------------------------------------- wheel
+      - name: Build wheel
+        shell: bash
+        run: python scripts/build_wheel.py --lib "${{ steps.lib.outputs.path }}" --tag ${{ matrix.tag }} --out dist
+
+      - name: Build Termux / Pydroid wheel (Android library, plain linux tag)
+        if: matrix.termux_tag
+        shell: bash
+        run: python scripts/build_wheel.py --lib "${{ steps.lib.outputs.path }}" --tag ${{ matrix.termux_tag }} --out dist-termux
+
+      # ---------------------------------------------------------------------------- smoke test
+      - name: Smoke test the installed wheel
+        if: matrix.test
+        shell: bash
+        run: |
+          python -m venv /tmp/venv-test
+          if [ -f /tmp/venv-test/bin/activate ]; then . /tmp/venv-test/bin/activate; else . /tmp/venv-test/Scripts/activate; fi
+          pip install pytest dist/*.whl
+          cd tests
+          python -c "import pypdfcraft as p; print('engine', p.engine_version(), '| tools', len(p.tools()))"
+          python -m pytest -m engine -v
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheel-${{ matrix.name }}
+          path: dist/*.whl
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        if: matrix.termux_tag
+        with:
+          name: termux-${{ matrix.name }}
+          path: dist-termux/*.whl
+          if-no-files-found: error
+
+  test-wheel-pythons:
+    name: install wheel on python ${{ matrix.python }} (${{ matrix.name }})
+    needs: native
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: linux-x86_64,   os: ubuntu-latest,  python: "3.9"  }
+          - { name: linux-x86_64,   os: ubuntu-latest,  python: "3.11" }
+          - { name: linux-x86_64,   os: ubuntu-latest,  python: "3.13" }
+          - { name: macos-arm64,    os: macos-14,       python: "3.9"  }
+          - { name: macos-arm64,    os: macos-14,       python: "3.13" }
+          - { name: windows-x86_64, os: windows-latest, python: "3.9"  }
+          - { name: windows-x86_64, os: windows-latest, python: "3.13" }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "${{ matrix.python }}" }
+      - uses: actions/download-artifact@v4
+        with:
+          name: wheel-${{ matrix.name }}
+          path: dist
+      - shell: bash
+        run: |
+          pip install pytest dist/*.whl
+          cd tests
+          python -m pytest -m engine -v
+
+  ocr-models-wheel:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install build
+      - name: Download and verify the OCR models (SHA-256)
+        run: python scripts/fetch_models.py
+      - name: Build pure-Python models wheel
+        run: python -m build --wheel packages/ocr-models --outdir dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheel-ocr-models
+          path: dist/*.whl
+
+  collect:
+    needs: [native, test-wheel-pythons, ocr-models-wheel]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: wheel-*
+          merge-multiple: true
+          path: dist
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: termux-*
+          merge-multiple: true
+          path: dist-termux
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install twine
+      - run: twine check dist/*.whl
+      - run: ls -la dist dist-termux
+      - uses: actions/upload-artifact@v4
+        with:
+          name: all-wheels
+          path: dist/*.whl
+      - uses: actions/upload-artifact@v4
+        with:
+          name: all-termux-wheels
+          path: dist-termux/*.whl

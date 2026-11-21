@@ -1,0 +1,66 @@
+name: Release
+
+# Push a tag like v0.4.0 (it must match src/pypdfcraft/_version.py):
+#   git tag v0.4.0 && git push origin v0.4.0
+# -> builds every platform wheel, publishes to PyPI (trusted publishing) and creates a GitHub Release
+#    with all wheels attached (including the Termux/Pydroid wheels that PyPI does not accept).
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  check-version:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Tag must equal package version
+        run: |
+          v=$(python -c "exec(open('src/pypdfcraft/_version.py').read()); print(__version__)")
+          test "v$v" = "${GITHUB_REF_NAME}" || { echo "tag ${GITHUB_REF_NAME} != package version v$v"; exit 1; }
+
+  wheels:
+    needs: check-version
+    uses: ./.github/workflows/wheels.yml
+
+  publish-pypi:
+    name: Publish to PyPI
+    needs: wheels
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/pypdfcraft
+    permissions:
+      id-token: write          # trusted publishing: no API token needed
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: all-wheels
+          path: dist
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist
+          skip-existing: true
+
+  github-release:
+    name: GitHub Release
+    needs: wheels
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with: { name: all-wheels, path: release }
+      - uses: actions/download-artifact@v4
+        with: { name: all-termux-wheels, path: release }
+      - name: SHA-256 checksums
+        run: cd release && sha256sum *.whl > SHA256SUMS.txt && cat SHA256SUMS.txt
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: release/*
+          generate_release_notes: true
+          body_path: RELEASE_NOTES.md
