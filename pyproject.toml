@@ -13,12 +13,10 @@ license-files = ["LICENSE-MIT", "LICENSE-APACHE", "NOTICE"]
 authors = [{ name = "Faraz Ali", email = "farazjankhushk@gmail.com" }]
 maintainers = [{ name = "Faraz Ali", email = "farazjankhushk@gmail.com" }]
 keywords = ["pdf", "pdf-editor", "pdf-compress", "pdf-merge", "pdf-split", "ocr", "pdf-to-word",
-            "pdf-to-image", "pdf-signing", "rust", "uniffi", "pdfcraft"]
+            "pdf-to-image", "pdf-signing", "text-to-speech", "read-aloud", "rust", "uniffi", "pdfcraft"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
-    "License :: OSI Approved :: Apache Software License",
     "Operating System :: Microsoft :: Windows",
     "Operating System :: MacOS",
     "Operating System :: POSIX :: Linux",
@@ -41,6 +39,7 @@ dependencies = []
 [project.optional-dependencies]
 numpy = ["numpy"]
 pil = ["pillow"]
+speech = ["pyttsx3"]
 ocr = ["pypdfcraft-ocr-models>=0.1.0"]
 all = ["numpy", "pillow", "pypdfcraft-ocr-models>=0.1.0"]
 dev = ["tomli; python_version < \"3.11\"", "pytest>=8", "ruff>=0.6", "build", "twine", "mkdocs>=1.6,<2", "mkdocs-material>=9.5"]

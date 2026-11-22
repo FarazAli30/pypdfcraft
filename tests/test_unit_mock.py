@@ -85,25 +85,29 @@ def test_wrapper_logic(fake):
     open("in.pdf", "wb").write(b"%PDF-1.4 fake" * 20); open("b.pdf", "wb").write(b"%PDF-1.4 b")
     for n in ("logo.png", "n.docx", "n.txt", "p.jpg"): open(n, "wb").write(b"x")
     D = os.getcwd()
+
+    def J(rel):
+        """a path inside the working directory, with this OS's separators"""
+        return os.path.join(D, *rel.split("/"))
     def calls(name): return [c[1] for c in fake.calls if c[0] == name]
 
     # ---- optional output paths: automatic, absolute, never overwrite
-    r = pdf.compress("in.pdf"); assert r.out == f"{D}/in_compressed.pdf" and r.written and r.bytes_after == 1
+    r = pdf.compress("in.pdf"); assert r.out == J("in_compressed.pdf") and r.written and r.bytes_after == 1
     fake.reduce_written = False
-    r = pdf.compress("in.pdf"); assert r.out == f"{D}/in_compressed_2.pdf" and r.copied_original and os.path.exists(r.out)
+    r = pdf.compress("in.pdf"); assert r.out == J("in_compressed_2.pdf") and r.copied_original and os.path.exists(r.out)
     fake.reduce_written = True
-    r = pdf.compress("in.pdf", "sub/small.pdf"); assert r.out == f"{D}/sub/small.pdf"
+    r = pdf.compress("in.pdf", "sub/small.pdf"); assert r.out == J("sub/small.pdf")
     r = pdf.compress("in.pdf", preset="mobile"); assert any(c[0] == "doc_optimize" for c in fake.calls)
-    r = pdf.merge(["in.pdf", "b.pdf"]); assert r.out == f"{D}/in_merged.pdf"
-    assert calls("doc_combine")[-1]["paths"] == [f"{D}/in.pdf", f"{D}/b.pdf"]
-    r = pdf.split("in.pdf", every=2); assert r.out == f"{D}/in_parts" and os.path.isdir(r.out)
+    r = pdf.merge(["in.pdf", "b.pdf"]); assert r.out == J("in_merged.pdf")
+    assert calls("doc_combine")[-1]["paths"] == [J("in.pdf"), J("b.pdf")]
+    r = pdf.split("in.pdf", every=2); assert r.out == J("in_parts") and os.path.isdir(r.out)
     for bad in (dict(), dict(every=1, max_mb=2)):
         try: pdf.split("in.pdf", **bad); pytest.fail("criterion")
         except ValueError: pass
-    r = pdf.rotate("in.pdf", 90, pages=[1]); assert r.out == f"{D}/in_rotated.pdf" and calls("doc_save")[-1]["path"] == r.out
-    r = pdf.delete_pages("in.pdf", [2]); r = pdf.extract_pages("in.pdf", [1, 2]); assert r.out == f"{D}/in_pages.pdf"
+    r = pdf.rotate("in.pdf", 90, pages=[1]); assert r.out == J("in_rotated.pdf") and calls("doc_save")[-1]["path"] == r.out
+    r = pdf.delete_pages("in.pdf", [2]); r = pdf.extract_pages("in.pdf", [1, 2]); assert r.out == J("in_pages.pdf")
     r = pdf.protect("in.pdf", "secret"); assert calls("doc_protect")[-1]["open_password"] == "secret"
-    r = pdf.rotate("in.pdf", 180, inplace=True); assert r.out == f"{D}/in.pdf" and "path" not in calls("doc_save")[-1]
+    r = pdf.rotate("in.pdf", 180, inplace=True); assert r.out == J("in.pdf") and "path" not in calls("doc_save")[-1]
     assert not fake.docs, "documents must be closed after each helper"
 
     # ---- text: lines / replace / edit
@@ -112,7 +116,7 @@ def test_wrapper_logic(fake):
     with contextlib.redirect_stdout(buf): pdf.show_lines("in.pdf", 1)
     assert "#1" in buf.getvalue() and "Invoice 2023 total" in buf.getvalue()
     r = pdf.replace_text("in.pdf", "2023", "2024")
-    assert r.replaced == 2 and r.out.startswith(f"{D}/in_edited") and calls("text_edit")[0]["text"] == "Invoice 2024 total"
+    assert r.replaced == 2 and r.out.startswith(J("in_edited")) and calls("text_edit")[0]["text"] == "Invoice 2024 total"
     assert fake.lines[1] == ["Invoice 2024 total", "Thank you for 2024"]
     r = pdf.replace_text("in.pdf", "WORLD across", "planet over", pages=[3])           # spans two lines -> paragraph mode
     assert r.replaced == 1 and "paragraph" in r.edits[0]["where"] and fake.lines[3] == ["Hello planet over lines"]
@@ -141,23 +145,23 @@ def test_wrapper_logic(fake):
     # ---- images
     im = pdf.images("in.pdf", 1); assert [i.image for i in im] == [1, 2] and im[0].pixels == [10, 10]
     r = pdf.replace_image("in.pdf", 1, 2, "logo.png")
-    c = calls("image_edit")[-1]; assert c["action"] == "replace" and c["image"] == 2 and c["path"] == f"{D}/logo.png"
+    c = calls("image_edit")[-1]; assert c["action"] == "replace" and c["image"] == 2 and c["path"] == J("logo.png")
     pdf.replace_image("in.pdf", 2, None, "logo.png"); assert calls("image_edit")[-1]["image"] == 1     # single image -> auto
     try: pdf.replace_image("in.pdf", 1, None, "logo.png"); pytest.fail("ambiguous")
     except ValueError: pass
     pdf.delete_image("in.pdf", 2); assert calls("image_edit")[-1]["action"] == "delete"
     pdf.move_image("in.pdf", 1, 1, [0, 0, 50, 50]); assert calls("image_edit")[-1]["rect"] == [0, 0, 50, 50]
-    r = pdf.save_image("in.pdf", 1, 1); assert r.out == f"{D}/in_p1_img1.png" and calls("image_save")[-1]["path"] == r.out
-    r = pdf.extract_images("in.pdf"); assert r.out == f"{D}/in_images"
-    pdf.add_image("in.pdf", 1, "logo.png", [0, 0, 10, 10]); assert calls("page_add_image")[-1]["path"] == f"{D}/logo.png"
+    r = pdf.save_image("in.pdf", 1, 1); assert r.out == J("in_p1_img1.png") and calls("image_save")[-1]["path"] == r.out
+    r = pdf.extract_images("in.pdf"); assert r.out == J("in_images")
+    pdf.add_image("in.pdf", 1, "logo.png", [0, 0, 10, 10]); assert calls("page_add_image")[-1]["path"] == J("logo.png")
 
     # ---- convert (both directions) + individual converters
-    r = pdf.convert("in.pdf", "docx"); assert r.out == f"{D}/in.docx" and calls("doc_export_office")[-1]["path"] == r.out
+    r = pdf.convert("in.pdf", "docx"); assert r.out == J("in.docx") and calls("doc_export_office")[-1]["path"] == r.out
     assert pdf.convert("in.pdf", "xlsx").out.endswith("in.xlsx") and pdf.to_powerpoint("in.pdf").out.endswith("in.pptx")
-    r = pdf.convert("in.pdf", "jpg"); assert calls("doc_export_images")[-1]["format"] == "jpeg" and r.out == f"{D}/in_jpg"
+    r = pdf.convert("in.pdf", "jpg"); assert calls("doc_export_images")[-1]["format"] == "jpeg" and r.out == J("in_jpg")
     assert pdf.convert("in.pdf", "txt").out.endswith("in.txt") and pdf.convert("in.pdf", "md").out.endswith("in.md")
-    r = pdf.convert("n.docx"); assert r.out == f"{D}/n.pdf" and calls("doc_create")[-1] == {"from": "office", "path": f"{D}/n.docx"}
-    r = pdf.convert("p.jpg"); assert calls("doc_create")[-1]["from"] == "images" and r.out == f"{D}/p.pdf"
+    r = pdf.convert("n.docx"); assert r.out == J("n.pdf") and calls("doc_create")[-1] == {"from": "office", "path": J("n.docx")}
+    r = pdf.convert("p.jpg"); assert calls("doc_create")[-1]["from"] == "images" and r.out == J("p.pdf")
     r = pdf.convert("n.txt"); assert calls("doc_create")[-1]["from"] == "text"
     for bad in (("in.pdf", None), ("in.pdf", "zip"), ("a.zip", "pdf")):
         try: pdf.convert(*bad); pytest.fail("bad convert")

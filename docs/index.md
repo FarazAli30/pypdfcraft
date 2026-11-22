@@ -28,6 +28,7 @@ Owner / maintainer: **Faraz Ali**.  Engine: **PdfCraft** by the *ArtCraft Team a
 ```bash
 pip install pypdfcraft              # Windows, macOS, Linux (glibc + musl), Android
 pip install "pypdfcraft[ocr]"       # + OCR models (CC-BY-SA, ~12 MB)
+pip install "pypdfcraft[speech]"    # + pyttsx3 speech engine (exact word events)
 pip install "pypdfcraft[all]"       # + numpy / Pillow helpers
 ```
 
@@ -56,6 +57,8 @@ On Termux / Pydroid, `pip install` cannot see the Android wheel on PyPI; downloa
   [function reference](api.md); **all 186 engine tools** are reachable (`pdf.apply("a.pdf", "<tool>", ...)`,
   typed one-shot functions, or `doc.<tool>(...)` on an open document) - [coverage table](coverage.md).
 * **Rendering**: `doc.render(page, scale, region)` -> RGBA / PNG / NumPy / Pillow (handy for a Tkinter or Qt viewer).
+* **Read aloud**: `pdf.read_aloud("book.pdf", rate=1.2)` speaks the text in reading order with your system's voice (paragraph and
+  word callbacks for highlighting), `pdf.to_audio("book.pdf")` writes a `.wav` - fully offline ([guide](read-aloud.md)).
 * `pdf.help()` prints a cheat sheet; `pdf.search("watermark")` finds anything.
 
 ```python
@@ -68,7 +71,7 @@ with pdf.open("in.pdf") as doc:                  # full control on an open docum
 
 ## Documentation
 
-[Quickstart](quickstart.md) · [Cookbook](cookbook.md) · [Editing text & images](editing.md) ·
+[Quickstart](quickstart.md) · [Cookbook](cookbook.md) · [Editing text & images](editing.md) · [Read aloud](read-aloud.md) · [Read aloud](read-aloud.md) ·
 [Function reference](api.md) · [All 186 tools](tools.md) · [Feature coverage](coverage.md) ·
 [Architecture](architecture.md) · [Building from source](building.md) · [Releasing](releasing.md) ·
 [Troubleshooting](troubleshooting.md)

@@ -7,6 +7,7 @@
     pdf.replace_text("a.pdf", "2023", "2024")       # edit real page text -> a_edited.pdf
     pdf.replace_image("a.pdf", 1, 2, "logo.png")    # swap picture 2 on page 1
     pdf.convert("a.pdf", "docx")                    # PDF -> Word (also xlsx/pptx/html/md/txt/png/jpg)
+    pdf.read_aloud("a.pdf")                         # speak it with the system voice  (pdf.to_audio -> .wav)
 
     with pdf.open("in.pdf") as doc:                 # or work on an open document
         print(doc.text(1)); doc.render(1).save("p1.png")
@@ -21,6 +22,7 @@ PdfCraft contributors; this package is its Python binding.  See the project READ
 from . import api as _api
 from . import errors
 from . import features as _features
+from . import speech as _speech
 from ._version import ENGINE_VERSION, __version__
 from .api import *  # noqa: F401,F403  (compress, merge, split, ocr, apply ...)
 from .core import (  # noqa: A004
@@ -46,6 +48,7 @@ from .image import Image
 from .models import install_models
 from .models import set_dir as set_models_dir
 from .results import AttrDict, Result
+from .speech import *  # noqa: F401,F403  (read_aloud, to_audio, ReadAloud ...)
 from .tools import ALIASES, Tool, ToolGroup
 
 

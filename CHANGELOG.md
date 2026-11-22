@@ -16,8 +16,12 @@ Engine: PdfCraft 0.18.1
   page boxes / insertion / replacement / numbering, Bates numbering, sanitising, backgrounds, initial view,
   accessibility, PDF/A verification, measuring, JavaScript, camera clean-up.
 * Native text-geometry methods on `Document`: `glyph_count`, `nearest_glyph`, `glyph_rect`, `text_rects`.
+* **Read Aloud**: `read_aloud()`, `to_audio()`, `reading_text()`, `voices()` and the `ReadAloud` controller (play / stop / pause / resume /
+  forward / back, paragraph and word callbacks with page rectangles), using the engine's reading-order paragraphs and the
+  system speech engine (espeak-ng, macOS `say`, Windows SAPI, pyttsx3, Termux, plyer); `python -m pypdfcraft read|voices`.
 * `pypdfcraft-ocr-models` wheel (`pip install pypdfcraft[ocr]`); checksum-verified model download.
 * `python -m pypdfcraft diagnose | tools | describe | run | catalog | stubs | install-models`.
+
 
 ### Changed
 * Package renamed `pypdfcraft`; `src/` layout; the native library is found by `_loader` on all platforms
@@ -25,5 +29,9 @@ Engine: PdfCraft 0.18.1
 * Image conversion folders are named by format (`name_png/`, `name_jpg/`).
 
 ### Fixed
+* Packaging: removed the `License ::` classifiers that clash with the PEP 639 `license` expression (setuptools refused to build,
+  so `pip install -e .` failed in CI); wheel `Requires-Dist` markers are now valid PEP 508 (`twine check` passes).
+* CI: Linux jobs pinned to `ubuntu-24.04` (`ubuntu-latest` has no Python 3.9), `macos-latest`, `cargo ndk --platform 24`,
+  portable smoke-test venv, grouped Dependabot updates; unit tests no longer assume `/` path separators.
 * Engine `open` requires absolute paths: every path is made absolute and output folders are created.
 * `Document.tool(name=...)` no longer clashes with a tool argument called `name`.

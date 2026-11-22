@@ -838,7 +838,7 @@ Check PDF/A conformance (level '2b' or '3b').
 pypdfcraft.print_readiness(src, *, password=None)
 ```
 
-
+Check whether the file is ready for printing (fonts embedded, colour spaces, bleed ...).
 
 ### `audit_redactions`
 
@@ -897,3 +897,61 @@ pypdfcraft.find_document_in_photo(path)
 ```
 
 Detect the page corners of a document in a photo.
+
+## Read aloud
+
+### `read_aloud`
+
+```python
+pypdfcraft.read_aloud(src, pages=None, *, voice=None, language=None, rate=1.0, volume=1.0, backend=None, password=None, on_paragraph=None, on_word=None, wait=True)
+```
+
+Speak the PDF's text in reading order with the system voice (see the module docs for the engines).
+
+    read_aloud("book.pdf")                       # everything
+    read_aloud("book.pdf", pages=[3, 4], rate=1.3, voice="en-us")
+
+Returns the :class:`ReadAloud` controller (``stop()``, ``pause()``, ``forward()`` ...); with ``wait=False`` it
+keeps reading in the background.  Raises :class:`NoSpeechEngine` if the machine has no speech engine and
+``PdfCraftError`` if there is no text (scanned pages: run ``ocr()`` first).
+
+### `to_audio`
+
+```python
+pypdfcraft.to_audio(src, out=None, pages=None, *, voice=None, language=None, rate=1.0, volume=1.0, backend=None, password=None)
+```
+
+Write the spoken text to an audio file -> ``<name>.wav`` (engines: espeak-ng, macOS say, Windows SAPI, pyttsx3).
+
+### `reading_text`
+
+```python
+pypdfcraft.reading_text(src, pages=None, *, password=None)
+```
+
+The paragraphs Read Aloud would speak: ``[{page, index, text}]`` in reading order.
+
+### `voices`
+
+```python
+pypdfcraft.voices(backend=None)
+```
+
+Voices the speech engine offers (names usable as ``voice=``).
+
+### `ReadAloud`
+
+```python
+pypdfcraft.ReadAloud(source, *, pages=None, start_page=None, voice=None, language=None, rate=1.0, volume=1.0, backend=None, password=None, max_chars=1500, on_paragraph=None, on_word=None)
+```
+
+Speak a document paragraph by paragraph, like PdfCraft's Android Read Aloud.
+
+``source``: a path or an open :class:`~pypdfcraft.Document`.  ``pages``: 1-based list/range (default all).
+``rate`` 1.0 = normal speed.  ``on_paragraph(p)`` is called when a paragraph starts and ``on_word(w)`` for every
+word (``w.rect`` = ``[x0, y0, x1, y1]`` in PDF points from the top-left, ``w.page``, ``w.text``, ``w.paragraph``);
+word callbacks are exact with the ``pyttsx3`` engine and timed estimates otherwise.
+
+    r = ReadAloud("a.pdf", pages=range(1, 4), rate=1.1)
+    r.play()                          # blocks;  r.play(wait=False) returns at once
+    r.stop(); r.pause(); r.resume(); r.forward(); r.back()

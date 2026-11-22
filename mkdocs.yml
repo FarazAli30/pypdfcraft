@@ -17,6 +17,7 @@ nav:
       - Editing text & images: editing.md
       - Converting: converting.md
       - OCR: ocr.md
+      - Read aloud: read-aloud.md
       - Viewing pages (Tkinter / Qt): viewer.md
   - Reference:
       - Functions: api.md

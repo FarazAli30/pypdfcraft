@@ -261,6 +261,7 @@ def verify_pdfa(src, level=None, *, password=None):
 
 
 def print_readiness(src, *, password=None):
+    """Check whether the file is ready for printing (fonts embedded, colour spaces, bleed ...)."""
     return apply(src, "print_readiness", password=password)
 
 

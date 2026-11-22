@@ -4,6 +4,7 @@ import csv
 import hashlib
 import io
 import json
+import os
 import subprocess
 import sys
 import zipfile
@@ -25,7 +26,7 @@ def test_loader_candidates_and_env(tmp_path, monkeypatch):
     fake = tmp_path / "libpdfcraft_engine.so"
     fake.write_bytes(b"not a real library")
     monkeypatch.setenv("PDFCRAFT_LIB", str(fake))
-    assert _loader.find_library() == str(fake.resolve())
+    assert os.path.samefile(_loader.find_library(), fake)
     monkeypatch.setenv("PDFCRAFT_LIB", str(tmp_path / "nope.so"))
     found = _loader.find_library()
     assert found is None or found != str(tmp_path / "nope.so")
@@ -126,3 +127,39 @@ def test_tool_table_offline_matches_catalogue():
     infos = core._bundled_catalog()
     assert len(infos) >= 180 and all(i.name and i.input_schema for i in infos)
     assert pypdfcraft.help is not None and pypdfcraft.search("watermark")
+
+
+# --------------------------------------------------------------------------------------------- metadata must be installable / uploadable
+def _toml(path):
+    try:
+        import tomllib
+    except ModuleNotFoundError:                       # Python < 3.11
+        import tomli as tomllib
+    return tomllib.loads(Path(path).read_text(encoding="utf-8"))
+
+
+@needs_repo
+def test_pyproject_is_valid_for_current_setuptools():
+    """A PEP 639 licence expression and `License ::` classifiers must not be mixed (setuptools refuses to build)."""
+    proj = _toml(ROOT / "pyproject.toml")["project"]
+    assert isinstance(proj["license"], str)
+    assert not [c for c in proj["classifiers"] if c.startswith("License ::")]
+    for f in proj["license-files"]:
+        assert (ROOT / f).is_file(), f
+    assert (ROOT / proj["readme"]).is_file()
+
+
+@needs_repo
+def test_wheel_metadata_requirements_parse(tmp_path):
+    """Every Requires-Dist line must be a valid PEP 508 requirement (PyPI rejects the upload otherwise)."""
+    from packaging.requirements import Requirement
+    fake = tmp_path / "engine.bin"
+    fake.write_bytes(b"x")
+    subprocess.run([sys.executable, str(SCRIPTS / "build_wheel.py"), "--lib", str(fake), "--tag", "win_amd64",
+                    "--out", str(tmp_path)], check=True, capture_output=True)
+    (whl,) = tmp_path.glob("*.whl")
+    with zipfile.ZipFile(whl) as z:
+        meta = z.read(f"pypdfcraft-{_version()}.dist-info/METADATA").decode()
+    reqs = [l.split(": ", 1)[1] for l in meta.splitlines() if l.startswith("Requires-Dist: ")]
+    assert reqs and all(Requirement(r) for r in reqs)
+    assert not any(l.startswith("Classifier: License ::") for l in meta.splitlines())

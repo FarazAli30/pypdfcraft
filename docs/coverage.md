@@ -201,7 +201,7 @@ Every one of the engine's 186 tools is reachable from Python. `curated` = has a 
 |---|---|
 | MobileSession.open / close / documents / document | `pypdfcraft.open()`, `Document.close()`, `pypdfcraft.documents()` |
 | render_page | `Document.render()`, `pypdfcraft.render()` |
-| page_plain_text / reading_blocks / find_in_page | `Document.text()`, `.blocks()`, `.search()` |
+| page_plain_text / reading_blocks / find_in_page | `Document.text()`, `.blocks()`, `.search()`; reading blocks drive `read_aloud()`, `to_audio()`, `ReadAloud` |
 | outline / links / comments / attachments / widgets | `Document.outline()`, `.links()`, `.comments()`, `.attachments()`, `.widgets()` |
 | save_attachment / save_sound | `Document.save_attachment()`, `.save_sound()` |
 | signer_certificate | `Document.signer_certificate()` |

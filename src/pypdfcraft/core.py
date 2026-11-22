@@ -277,6 +277,19 @@ class Document:
     def text_of(self, text_range):
         return self._s.text_of(self.id, text_range)
 
+    def reading_text(self, page=None):
+        """Paragraphs in reading order, as Read Aloud speaks them: ``[{page, index, text}]``."""
+        from . import speech
+        r = speech.ReadAloud(self, pages=None if page is None else [page])
+        return [dict(page=p.page, index=p.index, text=p.text) for p in r.paragraphs]
+
+    def read_aloud(self, pages=None, **kw):
+        """Speak this document (see :func:`pypdfcraft.read_aloud`); returns the ReadAloud controller."""
+        from . import speech
+        r = speech.ReadAloud(self, pages=pages, **{k: v for k, v in kw.items() if k != "wait"})
+        r.play(wait=kw.get("wait", True))
+        return r
+
     @_guard
     def glyph_count(self, page):
         """Number of selectable glyphs on a page (the index space of the glyph methods)."""

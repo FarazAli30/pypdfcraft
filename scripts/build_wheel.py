@@ -65,7 +65,10 @@ def metadata(proj, version, readme):
     lines.append(f"Requires-Python: {proj['requires-python']}")
     for extra, reqs in proj.get("optional-dependencies", {}).items():
         lines.append(f"Provides-Extra: {extra}")
-        lines += [f'Requires-Dist: {r}; extra == "{extra}"' for r in reqs]
+        for r in reqs:
+            name, _, marker = r.partition(";")                      # keep an existing marker: (marker) and extra == "x"
+            cond = f'({marker.strip()}) and extra == "{extra}"' if marker.strip() else f'extra == "{extra}"'
+            lines.append(f"Requires-Dist: {name.strip()}; {cond}")
     lines += ["Description-Content-Type: text/markdown", "", readme]
     return "\n".join(lines) + "\n"
 

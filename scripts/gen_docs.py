@@ -9,7 +9,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 import pypdfcraft as pdf  # noqa: E402
-from pypdfcraft import api, features  # noqa: E402
+from pypdfcraft import api, features, speech  # noqa: E402
 
 DOCS = ROOT / "docs"
 CATALOG = json.loads((ROOT / "src/pypdfcraft/data/tools_catalog.json").read_text(encoding="utf-8"))["tools"]
@@ -28,11 +28,11 @@ def func_page():
            "All functions take file **paths**; `out` is always optional (a new `<name>_<what>.pdf` is created next to the "
            "source, never overwriting; `inplace=True` overwrites). Pages, lines and image numbers are **1-based**. "
            "They return a `Result` (`r.out` = file or folder written).", ""]
-    groups = {**api.CATALOG, **{f"{k} (more)": v for k, v in features.CATALOG.items()}}
+    groups = {**api.CATALOG, **{f"{k} (more)": v for k, v in features.CATALOG.items()}, **speech.CATALOG}
     for cat, names in groups.items():
         out += [f"## {cat}", ""]
         for n in names:
-            fn = getattr(api, n, None) or getattr(features, n, None) or getattr(pdf, n, None)
+            fn = getattr(api, n, None) or getattr(features, n, None) or getattr(speech, n, None) or getattr(pdf, n, None)
             if not callable(fn):
                 continue
             out += [f"### `{n}`", "", "```python", f"pypdfcraft.{n}{sig(fn)}", "```", "",
@@ -100,7 +100,7 @@ def coverage_page():
              "| engine method | Python |", "|---|---|"]
     native = [("MobileSession.open / close / documents / document", "`pypdfcraft.open()`, `Document.close()`, `pypdfcraft.documents()`"),
               ("render_page", "`Document.render()`, `pypdfcraft.render()`"),
-              ("page_plain_text / reading_blocks / find_in_page", "`Document.text()`, `.blocks()`, `.search()`"),
+              ("page_plain_text / reading_blocks / find_in_page", "`Document.text()`, `.blocks()`, `.search()`; reading blocks drive `read_aloud()`, `to_audio()`, `ReadAloud`"),
               ("outline / links / comments / attachments / widgets", "`Document.outline()`, `.links()`, `.comments()`, `.attachments()`, `.widgets()`"),
               ("save_attachment / save_sound", "`Document.save_attachment()`, `.save_sound()`"),
               ("signer_certificate", "`Document.signer_certificate()`"),
@@ -128,4 +128,3 @@ if __name__ == "__main__":
     index_page()
     func_page(); tools_page(); n = coverage_page()
     print(f"docs generated; {n}/{len(CATALOG)} tools with curated functions")
-

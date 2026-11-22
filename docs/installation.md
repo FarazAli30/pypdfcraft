@@ -20,6 +20,7 @@ It is tagged `py3-none-<platform>`: **one wheel per OS/CPU that works with every
 
 ```bash
 pip install "pypdfcraft[ocr]"    # OCR models (pypdfcraft-ocr-models, CC-BY-SA-4.0, ~12 MB)
+pip install "pypdfcraft[speech]" # pyttsx3 speech engine for read aloud (optional)
 pip install "pypdfcraft[pil]"    # Image.to_pil()
 pip install "pypdfcraft[numpy]"  # Image.to_numpy()
 pip install "pypdfcraft[all]"

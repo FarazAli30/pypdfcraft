@@ -257,3 +257,55 @@ def test_bundled_catalogue_matches_engine():
     bundled = {i.name: json.loads(i.input_schema) for i in core._bundled_catalog()}
     live = {t.name: json.loads(t.input_schema) for t in pdf._native().MobileSession().tools()}
     assert bundled == live
+
+
+# ------------------------------------------------------------------------------------------ Read Aloud
+def test_reading_text_and_read_aloud_order(sample):
+    from pypdfcraft import speech
+    paras = pdf.reading_text(sample)
+    assert [p.text for p in paras] == ["Invoice 2023 total", "Thank you for 2023", "Page two text", "Hello world across lines"]
+    assert [p.page for p in paras] == [1, 1, 2, 3]
+
+    class Rec(speech.Backend):
+        name = "rec"
+
+        def __init__(self):
+            self.spoken = []
+
+        def available(self):
+            return True
+
+        def speak(self, text, **kw):
+            self.spoken.append(text)
+
+    rec, words = Rec(), []
+    pdf.read_aloud(sample, pages=[1, 2], backend=rec, rate=1.2, on_word=words.append)
+    assert rec.spoken == ["Invoice 2023 total", "Thank you for 2023", "Page two text"]
+    with pdf.open(sample) as doc:
+        assert [p["text"] for p in doc.reading_text(2)] == ["Page two text"]
+        r = speech.ReadAloud(doc, pages=[1], backend=Rec())
+        ws = r.words(0)
+        assert [w.text for w in ws] == ["Invoice", "2023", "total"]
+        for w in ws:                                    # rectangles really are where the words are on the page
+            x0, y0, x1, y1 = w.rect
+            assert 60 < x0 < x1 < 400 and 95 < y0 < y1 < 125
+    with pytest.raises(pdf.PdfCraftError, match="nothing to read"):
+        pdf.read_aloud(sample, pages=[], backend=Rec())
+
+
+def test_to_audio_with_a_real_speech_engine(sample):
+    import wave
+
+    from pypdfcraft import speech
+    try:
+        backend = speech.get_backend()
+    except speech.NoSpeechEngine:
+        pytest.skip("no text-to-speech engine installed (e.g. apt install espeak-ng)")
+    if not backend.can_save:
+        pytest.skip(f"speech engine {backend.name} cannot write files")
+    r = pdf.to_audio(sample, pages=[1, 2])
+    assert r.out.endswith("in.wav") and r.words == 10 and r.engine == backend.name
+    with wave.open(r.out) as w:
+        assert w.getnframes() / w.getframerate() > 1.0
+    faster = pdf.to_audio(sample, r.out.replace("in.wav", "fast.wav"), pages=[1, 2], rate=2.0)
+    assert faster.seconds < r.seconds

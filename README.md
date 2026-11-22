@@ -28,6 +28,7 @@ Owner / maintainer: **Faraz Ali**.  Engine: **PdfCraft** by the *ArtCraft Team a
 ```bash
 pip install pypdfcraft              # Windows, macOS, Linux (glibc + musl), Android
 pip install "pypdfcraft[ocr]"       # + OCR models (CC-BY-SA, ~12 MB)
+pip install "pypdfcraft[speech]"    # + pyttsx3 speech engine (exact word events)
 pip install "pypdfcraft[all]"       # + numpy / Pillow helpers
 ```
 
@@ -56,6 +57,8 @@ On Termux / Pydroid, `pip install` cannot see the Android wheel on PyPI; downloa
   [function reference](docs/api.md); **all 186 engine tools** are reachable (`pdf.apply("a.pdf", "<tool>", ...)`,
   typed one-shot functions, or `doc.<tool>(...)` on an open document) - [coverage table](docs/coverage.md).
 * **Rendering**: `doc.render(page, scale, region)` -> RGBA / PNG / NumPy / Pillow (handy for a Tkinter or Qt viewer).
+* **Read aloud**: `pdf.read_aloud("book.pdf", rate=1.2)` speaks the text in reading order with your system's voice (paragraph and
+  word callbacks for highlighting), `pdf.to_audio("book.pdf")` writes a `.wav` - fully offline ([guide](docs/read-aloud.md)).
 * `pdf.help()` prints a cheat sheet; `pdf.search("watermark")` finds anything.
 
 ```python
@@ -68,7 +71,7 @@ with pdf.open("in.pdf") as doc:                  # full control on an open docum
 
 ## Documentation
 
-[Quickstart](docs/quickstart.md) · [Cookbook](docs/cookbook.md) · [Editing text & images](docs/editing.md) ·
+[Quickstart](docs/quickstart.md) · [Cookbook](docs/cookbook.md) · [Editing text & images](docs/editing.md) · [Read aloud](docs/read-aloud.md) · [Read aloud](docs/read-aloud.md) ·
 [Function reference](docs/api.md) · [All 186 tools](docs/tools.md) · [Feature coverage](docs/coverage.md) ·
 [Architecture](docs/architecture.md) · [Building from source](docs/building.md) · [Releasing](docs/releasing.md) ·
 [Troubleshooting](docs/troubleshooting.md)
