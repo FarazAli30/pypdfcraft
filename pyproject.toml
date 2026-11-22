@@ -62,7 +62,7 @@ version = { attr = "pypdfcraft._version.__version__" }
 where = ["src"]
 
 [tool.setuptools.package-data]
-pypdfcraft = ["py.typed", "data/*.json", "_lib/*"]
+pypdfcraft = ["py.typed", "data/*.json", "data/*.txt", "_lib/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

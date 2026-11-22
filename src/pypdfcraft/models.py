@@ -98,6 +98,15 @@ def _sha256(path):
     return h.hexdigest()
 
 
+USER_AGENT = "pypdfcraft (+https://github.com/FarazAli30/pypdfcraft)"
+
+
+def _http_get(url, target):
+    req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
+    with urllib.request.urlopen(req, timeout=60) as r, open(target, "wb") as f:
+        shutil.copyfileobj(r, f)
+
+
 def _download(urls, target, sha, progress):
     """Download the first working URL to ``target`` (checked by SHA-256; kept if already correct)."""
     if os.path.isfile(target) and _sha256(target) == sha:
@@ -107,7 +116,7 @@ def _download(urls, target, sha, progress):
         tmp = target + ".part"
         try:
             progress(f"downloading {os.path.basename(target)} ...")
-            urllib.request.urlretrieve(url, tmp)
+            _http_get(url, tmp)
             if _sha256(tmp) != sha:
                 raise ValueError(f"checksum mismatch for {url}")
             os.replace(tmp, target)
@@ -119,15 +128,23 @@ def _download(urls, target, sha, progress):
     raise OSError(f"could not download {os.path.basename(target)}: {last}")
 
 
+def licence_path():
+    """The CC-BY-SA-4.0 legal text shipped inside this package (no download needed)."""
+    return os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "CC-BY-SA-4.0.txt")
+
+
 def fetch(dest, progress=print):
     """Download the two models (+ licence and attribution notes) into ``dest``, verified by SHA-256."""
     os.makedirs(dest, exist_ok=True)
-    licence = os.path.join(dest, "LICENCE.part.txt")
-    _download([LICENCE_URL], licence, LICENCE_SHA256, progress)
+    licence = licence_path()
+    if not (os.path.isfile(licence) and _sha256(licence) == LICENCE_SHA256):          # packaged copy missing/damaged
+        licence = os.path.join(dest, "LICENCE.part.txt")
+        _download([LICENCE_URL], licence, LICENCE_SHA256, progress)
     for name, sha in SHA256.items():
         _download([MODEL_URL + name, FALLBACK_URL + name], os.path.join(dest, name), sha, progress)
         shutil.copyfile(licence, os.path.join(dest, name + ".LICENCE.txt"))
-    os.remove(licence)
+    if licence.endswith("LICENCE.part.txt"):
+        os.remove(licence)
     with open(os.path.join(dest, "ATTRIBUTION.txt"), "w", encoding="utf-8") as f:
         f.write(ATTRIBUTION.format(files="\n".join(SHA256), licence=LICENCE_URL))
     return dest

@@ -163,3 +163,47 @@ def test_wheel_metadata_requirements_parse(tmp_path):
     reqs = [l.split(": ", 1)[1] for l in meta.splitlines() if l.startswith("Requires-Dist: ")]
     assert reqs and all(Requirement(r) for r in reqs)
     assert not any(l.startswith("Classifier: License ::") for l in meta.splitlines())
+
+
+# --------------------------------------------------------------------------------------------- OCR model download (no network in tests)
+def test_packaged_licence_text_matches_the_expected_checksum():
+    from pypdfcraft import models
+    assert models._sha256(models.licence_path()) == models.LICENCE_SHA256
+
+
+def test_fetch_needs_no_network_for_the_licence(tmp_path, monkeypatch):
+    """The licence comes from the package (the CC website answered 403 to CI runners); only the models are downloaded."""
+    from pypdfcraft import models
+    wanted = []
+
+    def fake_download(urls, target, sha, progress):
+        wanted.append(Path(target).name)
+        Path(target).write_bytes(b"model")
+
+    monkeypatch.setattr(models, "_download", fake_download)
+    out = models.fetch(str(tmp_path / "m"), progress=lambda *a: None)
+    assert wanted == list(models.SHA256)                                    # nothing else was fetched
+    for name in models.SHA256:
+        assert (Path(out) / f"{name}.LICENCE.txt").read_bytes() == Path(models.licence_path()).read_bytes()
+    assert "CC-BY-SA-4.0" in (Path(out) / "ATTRIBUTION.txt").read_text()
+
+
+def test_downloads_send_a_user_agent(monkeypatch):
+    from pypdfcraft import models
+    seen = {}
+
+    class R:
+        def __enter__(self): return self
+        def __exit__(self, *a): return False
+        def read(self, n=-1): return b""
+
+    def fake_urlopen(req, timeout=None):
+        seen["ua"] = req.get_header("User-agent")
+        return R()
+
+    monkeypatch.setattr(models.urllib.request, "urlopen", fake_urlopen)
+    import os
+    import tempfile
+    with tempfile.TemporaryDirectory() as d:
+        models._http_get("https://example.org/x", os.path.join(d, "x"))
+    assert seen["ua"].startswith("pypdfcraft")

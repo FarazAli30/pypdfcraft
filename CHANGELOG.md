@@ -29,6 +29,8 @@ Engine: PdfCraft 0.18.1
 * Image conversion folders are named by format (`name_png/`, `name_jpg/`).
 
 ### Fixed
+* OCR-models wheel build: the CC-BY-SA licence text now ships inside the package (the creativecommons.org site answered
+  `403 Forbidden` to CI runners) and downloads send a User-Agent.
 * Packaging: removed the `License ::` classifiers that clash with the PEP 639 `license` expression (setuptools refused to build,
   so `pip install -e .` failed in CI); wheel `Requires-Dist` markers are now valid PEP 508 (`twine check` passes).
 * CI: Linux jobs pinned to `ubuntu-24.04` (`ubuntu-latest` has no Python 3.9), `macos-latest`, `cargo ndk --platform 24`,
