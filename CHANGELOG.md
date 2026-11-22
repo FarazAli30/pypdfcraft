@@ -29,6 +29,8 @@ Engine: PdfCraft 0.18.1
 * Image conversion folders are named by format (`name_png/`, `name_jpg/`).
 
 ### Fixed
+* Windows: the packaged licence text is verified ignoring line endings (a Windows checkout converts it to CRLF, which
+  made the checksum fail and triggered a download).
 * OCR-models wheel build: the CC-BY-SA licence text now ships inside the package (the creativecommons.org site answered
   `403 Forbidden` to CI runners) and downloads send a User-Agent.
 * Packaging: removed the `License ::` classifiers that clash with the PEP 639 `license` expression (setuptools refused to build,

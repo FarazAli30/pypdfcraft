@@ -168,7 +168,7 @@ def test_wheel_metadata_requirements_parse(tmp_path):
 # --------------------------------------------------------------------------------------------- OCR model download (no network in tests)
 def test_packaged_licence_text_matches_the_expected_checksum():
     from pypdfcraft import models
-    assert models._sha256(models.licence_path()) == models.LICENCE_SHA256
+    assert models._sha256_text(models.licence_path()) == models.LICENCE_SHA256
 
 
 def test_fetch_needs_no_network_for_the_licence(tmp_path, monkeypatch):
@@ -184,7 +184,7 @@ def test_fetch_needs_no_network_for_the_licence(tmp_path, monkeypatch):
     out = models.fetch(str(tmp_path / "m"), progress=lambda *a: None)
     assert wanted == list(models.SHA256)                                    # nothing else was fetched
     for name in models.SHA256:
-        assert (Path(out) / f"{name}.LICENCE.txt").read_bytes() == Path(models.licence_path()).read_bytes()
+        assert models._sha256_text(str(Path(out) / f"{name}.LICENCE.txt")) == models.LICENCE_SHA256
     assert "CC-BY-SA-4.0" in (Path(out) / "ATTRIBUTION.txt").read_text()
 
 
@@ -207,3 +207,20 @@ def test_downloads_send_a_user_agent(monkeypatch):
     with tempfile.TemporaryDirectory() as d:
         models._http_get("https://example.org/x", os.path.join(d, "x"))
     assert seen["ua"].startswith("pypdfcraft")
+
+
+def test_licence_with_windows_line_endings_is_accepted(tmp_path, monkeypatch):
+    """A Windows git checkout turns the licence into CRLF; that must not look like a damaged file (it did in CI)."""
+    from pypdfcraft import models
+    crlf = tmp_path / "CC-BY-SA-4.0.txt"
+    crlf.write_bytes(Path(models.licence_path()).read_bytes().replace(b"\r\n", b"\n").replace(b"\n", b"\r\n"))
+    assert models._sha256(str(crlf)) != models.LICENCE_SHA256                 # a plain checksum would reject it ...
+    assert models._sha256_text(str(crlf)) == models.LICENCE_SHA256            # ... the line-ending-proof one does
+    monkeypatch.setattr(models, "licence_path", lambda: str(crlf))
+    wanted = []
+    monkeypatch.setattr(models, "_download", lambda urls, target, sha, progress: (wanted.append(Path(target).name),
+                                                                                 Path(target).write_bytes(b"m")))
+    out = models.fetch(str(tmp_path / "m"), progress=lambda *a: None)
+    assert wanted == list(models.SHA256)                                     # still nothing downloaded for the licence
+    written = (Path(out) / "text-detection.rten.LICENCE.txt").read_bytes()
+    assert b"\r\n" not in written                                            # and it is written with LF endings

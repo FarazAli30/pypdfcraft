@@ -98,6 +98,18 @@ def _sha256(path):
     return h.hexdigest()
 
 
+def _sha256_text(path):
+    """SHA-256 of a text file with line endings normalised to LF (a Windows git checkout may have made them CRLF)."""
+    with open(path, "rb") as f:
+        return hashlib.sha256(f.read().replace(b"\r\n", b"\n")).hexdigest()
+
+
+def _copy_text(src, dst):
+    """Copy a text file, writing LF line endings."""
+    with open(src, "rb") as f, open(dst, "wb") as g:
+        g.write(f.read().replace(b"\r\n", b"\n"))
+
+
 USER_AGENT = "pypdfcraft (+https://github.com/FarazAli30/pypdfcraft)"
 
 
@@ -137,12 +149,12 @@ def fetch(dest, progress=print):
     """Download the two models (+ licence and attribution notes) into ``dest``, verified by SHA-256."""
     os.makedirs(dest, exist_ok=True)
     licence = licence_path()
-    if not (os.path.isfile(licence) and _sha256(licence) == LICENCE_SHA256):          # packaged copy missing/damaged
+    if not (os.path.isfile(licence) and _sha256_text(licence) == LICENCE_SHA256):          # packaged copy missing/damaged
         licence = os.path.join(dest, "LICENCE.part.txt")
         _download([LICENCE_URL], licence, LICENCE_SHA256, progress)
     for name, sha in SHA256.items():
         _download([MODEL_URL + name, FALLBACK_URL + name], os.path.join(dest, name), sha, progress)
-        shutil.copyfile(licence, os.path.join(dest, name + ".LICENCE.txt"))
+        _copy_text(licence, os.path.join(dest, name + ".LICENCE.txt"))
     if licence.endswith("LICENCE.part.txt"):
         os.remove(licence)
     with open(os.path.join(dest, "ATTRIBUTION.txt"), "w", encoding="utf-8") as f:
