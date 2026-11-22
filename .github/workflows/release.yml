@@ -14,7 +14,7 @@ permissions:
 
 jobs:
   check-version:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - name: Tag must equal package version
@@ -29,7 +29,7 @@ jobs:
   publish-pypi:
     name: Publish to PyPI
     needs: wheels
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     environment:
       name: pypi
       url: https://pypi.org/p/pypdfcraft
@@ -48,7 +48,7 @@ jobs:
   github-release:
     name: GitHub Release
     needs: wheels
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: write
     steps:
