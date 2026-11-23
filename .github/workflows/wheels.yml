@@ -43,7 +43,7 @@ jobs:
           - { name: android-x86_64,      os: ubuntu-24.04,  target: x86_64-linux-android,        build: ndk,      abi: x86_64,      lib: libpdfcraft_android.so, tag: android_24_x86_64 }
           - { name: android-x86,         os: ubuntu-24.04,  target: i686-linux-android,          build: ndk,      abi: x86,         lib: libpdfcraft_android.so, tag: android_24_x86 }
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: dtolnay/rust-toolchain@master
         with:
@@ -53,7 +53,7 @@ jobs:
         with:
           workspaces: rust
           key: ${{ matrix.name }}
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with: { python-version: "3.12" }
 
       - name: Install cargo-zigbuild
@@ -130,12 +130,12 @@ jobs:
           python -c "import pypdfcraft as p; print('engine', p.engine_version(), '| tools', len(p.tools()))"
           python -m pytest -m engine -v
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: wheel-${{ matrix.name }}
           path: dist/*.whl
           if-no-files-found: error
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: matrix.termux_tag
         with:
           name: termux-${{ matrix.name }}
@@ -158,10 +158,10 @@ jobs:
           - { name: windows-x86_64, os: windows-latest, python: "3.9"  }
           - { name: windows-x86_64, os: windows-latest, python: "3.13" }
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with: { python-version: "${{ matrix.python }}" }
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: wheel-${{ matrix.name }}
           path: dist
@@ -174,15 +174,15 @@ jobs:
   ocr-models-wheel:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with: { python-version: "3.12" }
       - run: pip install build
       - name: Download and verify the OCR models (SHA-256)
         run: python scripts/fetch_models.py
       - name: Build pure-Python models wheel
         run: python -m build --wheel packages/ocr-models --outdir dist
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: wheel-ocr-models
           path: dist/*.whl
@@ -191,29 +191,29 @@ jobs:
     needs: [native, test-wheel-pythons, ocr-models-wheel]
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
         with:
           pattern: wheel-*
           merge-multiple: true
           path: dist
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           pattern: termux-*
           merge-multiple: true
           path: dist-termux
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with: { python-version: "3.12" }
       - run: pip install twine
       - name: Verify every downloaded wheel again (catches damage during artifact upload/download)
         run: python scripts/verify_wheel.py dist/*.whl dist-termux/*.whl
       - run: twine check dist/*.whl
       - run: ls -la dist dist-termux
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: all-wheels
           path: dist/*.whl
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: all-termux-wheels
           path: dist-termux/*.whl
