@@ -110,6 +110,10 @@ jobs:
         shell: bash
         run: python scripts/build_wheel.py --lib "${{ steps.lib.outputs.path }}" --tag ${{ matrix.termux_tag }} --out dist-termux
 
+      - name: Verify the wheel(s) (integrity, RECORD hashes, library format and CPU match the tag)
+        shell: bash
+        run: python scripts/verify_wheel.py dist/*.whl $(ls dist-termux/*.whl 2>/dev/null)
+
       # ---------------------------------------------------------------------------- smoke test
       - name: Install a speech engine (for the Read Aloud audio test)
         if: matrix.test && runner.os == 'Linux'
@@ -187,6 +191,7 @@ jobs:
     needs: [native, test-wheel-pythons, ocr-models-wheel]
     runs-on: ubuntu-24.04
     steps:
+      - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
           pattern: wheel-*
@@ -200,6 +205,8 @@ jobs:
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
       - run: pip install twine
+      - name: Verify every downloaded wheel again (catches damage during artifact upload/download)
+        run: python scripts/verify_wheel.py dist/*.whl dist-termux/*.whl
       - run: twine check dist/*.whl
       - run: ls -la dist dist-termux
       - uses: actions/upload-artifact@v4

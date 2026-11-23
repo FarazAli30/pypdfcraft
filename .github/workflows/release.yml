@@ -36,10 +36,15 @@ jobs:
     permissions:
       id-token: write          # trusted publishing: no API token needed
     steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
       - uses: actions/download-artifact@v4
         with:
           name: all-wheels
           path: dist
+      - name: Last check before the (irreversible) upload
+        run: python scripts/verify_wheel.py dist/*.whl
       - uses: pypa/gh-action-pypi-publish@release/v1
         with:
           packages-dir: dist
@@ -57,6 +62,10 @@ jobs:
         with: { name: all-wheels, path: release }
       - uses: actions/download-artifact@v4
         with: { name: all-termux-wheels, path: release }
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - name: Verify all release wheels
+        run: python scripts/verify_wheel.py release/*.whl
       - name: SHA-256 checksums
         run: cd release && sha256sum *.whl > SHA256SUMS.txt && cat SHA256SUMS.txt
       - uses: softprops/action-gh-release@v2
