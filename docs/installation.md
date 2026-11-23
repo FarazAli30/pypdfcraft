@@ -28,6 +28,11 @@ pip install "pypdfcraft[all]"
 
 ## Termux / Pydroid 3 (Android)
 
+> **Use the `linux_aarch64` wheel here, not `android_24_arm64_v8a`.** Termux and Pydroid 3 run a normal "linux" CPython, so
+> their pip refuses `android_*` wheels with *"not a supported wheel on this platform"*. The `android_24_*` wheels are for CPython
+> builds that report `sys.platform == "android"` (official Android CPython 3.13+, Chaquopy, BeeWare).
+> 32-bit phones (`uname -m` = `armv7l`/`armv8l`) use `linux_armv7l`.
+
 PyPI cannot serve a `linux_*` wheel, so download the file that matches `uname -m` from the
 [GitHub Release](https://github.com/FarazAli30/pypdfcraft/releases) (`aarch64` = 64-bit phones) and install it:
 

@@ -224,3 +224,86 @@ def test_licence_with_windows_line_endings_is_accepted(tmp_path, monkeypatch):
     assert wanted == list(models.SHA256)                                     # still nothing downloaded for the licence
     written = (Path(out) / "text-detection.rten.LICENCE.txt").read_bytes()
     assert b"\r\n" not in written                                            # and it is written with LF endings
+
+
+# --------------------------------------------------------------------------------------------- verify_wheel.py
+def _fake_lib(kind, cpu, size=200_000):
+    """A byte string with the header of a real ELF / Mach-O / PE file for ``cpu`` plus the engine's exported symbol name."""
+    import os
+    import struct
+    b = bytearray(os.urandom(size))                           # incompressible: damage to it cannot go unnoticed
+    if kind == "elf":
+        b[:4] = b"\x7fELF"
+        struct.pack_into("<H", b, 18, {"x86_64": 62, "aarch64": 183, "arm": 40, "x86": 3}[cpu])
+    elif kind == "macho":
+        b[:4] = b"\xcf\xfa\xed\xfe"
+        struct.pack_into("<I", b, 4, {"x86_64": 0x01000007, "aarch64": 0x0100000C}[cpu])
+    else:
+        b[:2] = b"MZ"
+        struct.pack_into("<I", b, 0x3C, 0x80)
+        b[0x80:0x84] = b"PE\0\0"
+        struct.pack_into("<H", b, 0x84, {"x86_64": 0x8664, "aarch64": 0xAA64, "x86": 0x14C}[cpu])
+    b[200:243] = b"ffi_pdfcraft_android_uniffi_contract_version"
+    return bytes(b)
+
+
+def _wheel(tmp_path, tag, lib):
+    tmp_path.mkdir(parents=True, exist_ok=True)
+    f = tmp_path / "engine.bin"
+    f.write_bytes(lib)
+    subprocess.run([sys.executable, str(SCRIPTS / "build_wheel.py"), "--lib", str(f), "--tag", tag,
+                    "--out", str(tmp_path / "dist")], check=True, capture_output=True)
+    return next((tmp_path / "dist").glob(f"*{tag}.whl"))
+
+
+def _verify():
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("verify_wheel", SCRIPTS / "verify_wheel.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod.verify
+
+
+@needs_repo
+@pytest.mark.parametrize("tag, kind, cpu", [
+    ("manylinux_2_28_x86_64", "elf", "x86_64"), ("manylinux_2_28_aarch64", "elf", "aarch64"),
+    ("musllinux_1_2_aarch64", "elf", "aarch64"), ("linux_aarch64", "elf", "aarch64"), ("linux_armv7l", "elf", "arm"),
+    ("android_24_arm64_v8a", "elf", "aarch64"), ("android_24_armeabi_v7a", "elf", "arm"),
+    ("android_24_x86_64", "elf", "x86_64"), ("android_24_x86", "elf", "x86"),
+    ("macosx_11_0_arm64", "macho", "aarch64"), ("macosx_10_13_x86_64", "macho", "x86_64"),
+    ("win_amd64", "pe", "x86_64"), ("win_arm64", "pe", "aarch64"),
+])
+def test_verify_accepts_a_matching_library(tmp_path, tag, kind, cpu):
+    assert _verify()(_wheel(tmp_path, tag, _fake_lib(kind, cpu))) == []
+
+
+@needs_repo
+def test_verify_rejects_wrong_cpu_wrong_format_and_foreign_library(tmp_path):
+    verify = _verify()
+    assert any("aarch64" in p for p in verify(_wheel(tmp_path / "a", "android_24_arm64_v8a", _fake_lib("elf", "x86_64"))))
+    assert any("macho" in p or "elf" in p for p in verify(_wheel(tmp_path / "b", "win_amd64", _fake_lib("elf", "x86_64"))))
+    lib = bytearray(_fake_lib("elf", "x86_64"))
+    lib[200:243] = b"x" * 43                                                   # not an engine library
+    assert any("UniFFI" in p for p in verify(_wheel(tmp_path / "c", "manylinux_2_28_x86_64", bytes(lib))))
+
+
+@needs_repo
+def test_verify_detects_a_damaged_wheel(tmp_path):
+    """The failure seen in the wild: the library inside a wheel no longer matches its checksum."""
+    whl = _wheel(tmp_path, "android_24_arm64_v8a", _fake_lib("elf", "aarch64"))
+    assert _verify()(whl) == []
+    raw = bytearray(whl.read_bytes())
+    with zipfile.ZipFile(whl) as z:
+        zi = z.getinfo("pypdfcraft/_lib/libpdfcraft_engine.so")
+    raw[zi.header_offset + 30 + len(zi.filename) + zi.compress_size // 2] ^= 0xFF     # one flipped byte in the middle
+    whl.write_bytes(bytes(raw))
+    problems = _verify()(whl)
+    assert problems and any("libpdfcraft_engine.so" in p for p in problems)
+
+
+@needs_repo
+def test_verify_checks_the_tag_matches_the_file_name(tmp_path):
+    whl = _wheel(tmp_path, "win_amd64", _fake_lib("pe", "x86_64"))
+    renamed = whl.with_name(whl.name.replace("win_amd64", "macosx_11_0_arm64"))
+    whl.rename(renamed)
+    assert _verify()(renamed)

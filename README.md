@@ -10,6 +10,10 @@ compress, merge, split, convert to/from Word / Excel / PowerPoint / images, OCR,
 comment and more. No Java, no external services, no system packages: the engine is the open-source
 [PdfCraft](https://github.com/artcraft-android/pdfcraft-android) Rust library, shipped inside the wheel.
 
+> **Independent community binding.** pypdfcraft is maintained by Faraz Ali and is **not** an official product of the
+> PdfCraft project. The PDF engine it wraps is [PdfCraft](https://github.com/artcraft-android/pdfcraft-android), an
+> open-source Rust library by the ArtCraft Team and the PdfCraft contributors (MIT OR Apache-2.0).
+
 ```python
 import pypdfcraft as pdf
 
@@ -43,7 +47,8 @@ Pre-built wheels (`py3-none-<platform>`, any Python >= 3.9):
 | Android (CPython 3.13+, Chaquopy, BeeWare) | arm64-v8a, armeabi-v7a, x86_64, x86 | `android_24_*` |
 | Termux / Pydroid | aarch64, armv7 | `linux_aarch64`, `linux_armv7l` - download from the GitHub Release |
 
-On Termux / Pydroid, `pip install` cannot see the Android wheel on PyPI; download the matching
+On Termux / Pydroid, `pip install` cannot see the Android wheel on PyPI, and the `android_24_*` wheels are **not** for
+them (their pip says *"not a supported wheel on this platform"*); download the matching
 `...-py3-none-linux_aarch64.whl` from the [Releases](https://github.com/FarazAli30/pypdfcraft/releases) page and
 `pip install` that file.
 

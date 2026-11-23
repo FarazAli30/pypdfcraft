@@ -29,6 +29,10 @@ Engine: PdfCraft 0.18.1
 * Image conversion folders are named by format (`name_png/`, `name_jpg/`).
 
 ### Fixed
+* New `scripts/verify_wheel.py`, run in CI after building, after downloading the artifacts and again right before the PyPI upload:
+  zip CRCs, every file against RECORD, tag/metadata vs file name, and that the bundled library's format and CPU match the
+  platform tag. A damaged or mislabelled wheel can no longer be published.
+* Docs: Pydroid 3 / Termux need the `linux_aarch64` wheel, not `android_24_*`.
 * Windows: the packaged licence text is verified ignoring line endings (a Windows checkout converts it to CRLF, which
   made the checksum fail and triggered a download).
 * OCR-models wheel build: the CC-BY-SA licence text now ships inside the package (the creativecommons.org site answered
